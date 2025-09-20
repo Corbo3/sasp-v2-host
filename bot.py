@@ -341,6 +341,7 @@ class AddCivilModal(discord.ui.Modal, title="➕ Ajouter un civil"):
             embed.set_footer(text="Base de données civils | Ajout réussi")
 
             await interaction.response.send_message(embed=embed, ephemeral=True)
+            logs_dc(f"Civil ajouté : {self.prenom} {self.nom} - {self.telephone} - {self.adresse} par {interaction.user} (ID: {interaction.user.id})")
 
         except sqlite3.IntegrityError:
             await interaction.response.send_message("❌ Ce civil existe déjà (numéro de téléphone en double ?).", ephemeral=True)
@@ -365,6 +366,7 @@ class RemoveCivilModal(discord.ui.Modal, title="❌ Supprimer un civil"):
             )
             embed.set_footer(text="Base de données civils | Suppression réussie")
             await interaction.response.send_message(embed=embed, ephemeral=True)
+            logs_dc(f"Civil avec téléphone {self.telephone} supprimé par {interaction.user} (ID: {interaction.user.id})")
         else:
             await interaction.response.send_message("❌ Aucun civil trouvé avec ce téléphone.", ephemeral=True)
 
@@ -402,14 +404,15 @@ async def civils(interaction: discord.Interaction):
         color=discord.Color.blue()
     ) 
     await interaction.response.send_message(embed=embed, view=CivilView())
+    logs_dc(f"Commande /civils utilisée par {interaction.user} (ID: {interaction.user.id})")
 
 
 
 
+rapport_channel = 1419015970684407848  # Salon pour reports
 
 
-
-class ExampleModal(discord.ui.Modal, title="📝 Exemple de Modal"):
+class RapportModal(discord.ui.Modal, title="📝 - Rapport"):
     """
     Cette classe montre comment créer un modal avec des champs TextInput.
     Vous pouvez :
@@ -418,17 +421,17 @@ class ExampleModal(discord.ui.Modal, title="📝 Exemple de Modal"):
     - Ajouter un placeholder ou une longueur max
     """
 
-    champ1 = discord.ui.TextInput(
-        label="Champ 1",
-        placeholder="Écrire quelque chose...",
+    destinataire = discord.ui.TextInput(
+        label="Destinataire",
+        placeholder="Matricule ou nom de la personne concernée",
         required=True,  # Obligatoire ou non
-        max_length=100  # Limite de caractères
     )
 
-    champ2 = discord.ui.TextInput(
-        label="Champ 2",
-        placeholder="Optionnel",
-        required=False
+    rapport = discord.ui.TextInput(
+        label="Rapport",
+        placeholder="...",
+        style=discord.TextStyle.paragraph,  # Champ plus grand
+        required=True
     )
 
     async def on_submit(self, interaction: discord.Interaction):
@@ -439,16 +442,23 @@ class ExampleModal(discord.ui.Modal, title="📝 Exemple de Modal"):
         - Envoyer un message ou un embed
         - Interagir avec une base de données
         """
-        valeur1 = str(self.champ1)
-        valeur2 = str(self.champ2)
+        valeur1 = str(self.destinataire)
+        valeur2 = str(self.rapport)
+        channel = bot.get_channel(rapport_channel)
+        
 
         # Exemple simple d'embed
         embed = discord.Embed(
-            title="✅ Résultat du Modal",
-            description=f"Champ1 : {valeur1}\nChamp2 : {valeur2}",
+            title="Rapport",
+            description=f"Destinataire : {valeur1}\nRapport : {valeur2}",
             color=discord.Color.blue()
         )
-        await interaction.response.send_message(embed=embed, ephemeral=True)  # ephemeral=True pour que seul l'utilisateur voie le message
+        if channel:
+            await channel.send(f"**Nouveau rapport de {interaction.user.mention}**\n\n**Destinataire :** {valeur1}\n**Rapport :** {valeur2}")
+            await logs_dc(f"Rapport envoyé par {interaction.user} (ID: {interaction.user.id}) au destinataire {valeur1}")
+        else:
+            await logs_dc(f"Erreur : Salon de rapport introuvable pour le rapport de {interaction.user} (ID: {interaction.user.id})")
+        await interaction.response.send_message("Votre rapport est envoyé.")  # ephemeral=True pour que seul l'utilisateur voie le message
 
 
 # =========================
@@ -462,8 +472,9 @@ async def exemple(interaction: discord.Interaction):
     - Créer différents modals selon la commande
     - Ajouter des boutons, menus déroulants, etc.
     """
-    modal = ExampleModal()  # On instancie le modal
+    modal = RapportModal()  # On instancie le modal
     await interaction.response.send_modal(modal)
+    logs_dc(f"Commande /rapport utilisée par {interaction.user} (ID: {interaction.user.id})")
 
 
 
